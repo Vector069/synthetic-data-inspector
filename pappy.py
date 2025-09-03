@@ -246,4 +246,61 @@ if real_file and synthetic_file:
     ax.set_title("Correlation Heatmap (Real)")
     fig_synth, ax = plt.subplots(figsize=(6,4))
     sns.heatmap(analysis_synth['correlation'], annot=True, cmap='coolwarm', ax=ax)
-    ax.s
+    ax.set_title("Correlation Heatmap (Synthetic)")
+    add_side_by_side(fig_real, "Correlation Heatmap (Real)",
+                     fig_synth, "Correlation Heatmap (Synthetic)")
+
+    # --- Covariance heatmaps
+    fig_real, ax = plt.subplots(figsize=(6,4))
+    sns.heatmap(analysis_real['covariance'], annot=True, cmap='viridis', ax=ax)
+    ax.set_title("Covariance Heatmap (Real)")
+    fig_synth, ax = plt.subplots(figsize=(6,4))
+    sns.heatmap(analysis_synth['covariance'], annot=True, cmap='viridis', ax=ax)
+    ax.set_title("Covariance Heatmap (Synthetic)")
+    add_side_by_side(fig_real, "Covariance Heatmap (Real)",
+                     fig_synth, "Covariance Heatmap (Synthetic)")
+
+    # --- Inference & Conclusion (bottom, stacked)
+    elements.append(Spacer(1, 30))
+    elements.append(Paragraph("Inference and Conclusion", styles["Heading2"]))
+    elements.append(Spacer(1, 10))
+
+    reasoning_real_text = "".join([f"• {r}<br/>" for r in reasoning_real]) + f"<br/><b>{conclusion_real}</b>"
+    reasoning_synth_text = "".join([f"• {r}<br/>" for r in reasoning_synth]) + f"<br/><b>{conclusion_synth}</b>"
+
+    elements.append(Paragraph("<b>Real Dataset</b>", styles["Heading3"]))
+    elements.append(Paragraph(reasoning_real_text, styles["Normal"]))
+    elements.append(Spacer(1, 15))
+
+    elements.append(Paragraph("<b>Synthetic Dataset</b>", styles["Heading3"]))
+    elements.append(Paragraph(reasoning_synth_text, styles["Normal"]))
+
+    # Build PDF
+    doc.build(elements)
+    buffer.seek(0)
+
+    # Floating Download Button (Pinned to Top-Right)
+    st.markdown("""
+        <style>
+        .fixed-download {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 100;
+            background-color: white;
+            padding: 10px;
+            border-radius: 10px;
+            box-shadow: 0px 2px 8px rgba(0,0,0,0.2);
+        }
+        </style>
+    """, unsafe_allow_html=True)
+
+    with st.container():
+        st.markdown('<div class="fixed-download">', unsafe_allow_html=True)
+        st.download_button(
+            label="Download Full Report (PDF)",
+            data=buffer,
+            file_name="dataset_report.pdf",
+            mime="application/pdf"
+        )
+        st.markdown('</div>', unsafe_allow_html=True)
