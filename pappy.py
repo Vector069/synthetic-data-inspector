@@ -126,45 +126,190 @@ def infer_real_or_synthetic(analysis):
     return reasoning, conclusion
 
 
+# Ensure both datasets are uploaded
+if real_file and synthetic_file:
+    df_real = pd.read_csv(real_file)
+    df_synth = pd.read_csv(synthetic_file)
+    
+    # Analyze both
+    numeric_real, analysis_real, table_real = analyze_numeric_columns(df_real)
+    numeric_synth, analysis_synth, table_synth = analyze_numeric_columns(df_synth)
+    
+    # Side-by-side display for preview and statistics
+    st.subheader("Numeric Columns Preview")
+    col1, col2 = st.columns(2)
+    with col1:
+        st.markdown("**Real Dataset Preview**")
+        st.dataframe(numeric_real.head())
+    with col2:
+        st.markdown("**Synthetic Dataset Preview**")
+        st.dataframe(numeric_synth.head())
+    
+    st.subheader("Skewness, Kurtosis & Normality Test")
+    col1, col2 = st.columns(2)
+    with col1:
+        st.markdown("**Real Dataset**")
+        st.dataframe(table_real.style.format({
+            'Skewness': "{:.3f}",
+            'Kurtosis': "{:.3f}",
+            'Normality p-value': "{:.4f}"
+        }))
+    with col2:
+        st.markdown("**Synthetic Dataset**")
+        st.dataframe(table_synth.style.format({
+            'Skewness': "{:.3f}",
+            'Kurtosis': "{:.3f}",
+            'Normality p-value': "{:.4f}"
+        }))
+    
+    st.subheader("Summary Statistics")
+    col1, col2 = st.columns(2)
+    with col1:
+        st.markdown("**Real Dataset**")
+        st.dataframe(analysis_real['summary'])
+    with col2:
+        st.markdown("**Synthetic Dataset**")
+        st.dataframe(analysis_synth['summary'])
+    
+    st.subheader("Visualizations")
+    
+    # Histograms & Boxplots side by side
+    for col_name in numeric_real.columns:
+        col1, col2 = st.columns(2)
+        with col1:
+            fig, ax = plt.subplots()
+            sns.histplot(numeric_real[col_name], kde=True, ax=ax, color='skyblue')
+            ax.set_title(f"{col_name} Histogram (Real)")
+            st.pyplot(fig)
+            
+            fig, ax = plt.subplots()
+            sns.boxplot(x=numeric_real[col_name], ax=ax, color='salmon')
+            ax.set_title(f"{col_name} Boxplot (Real)")
+            st.pyplot(fig)
+        with col2:
+            if col_name in numeric_synth.columns:
+                fig, ax = plt.subplots()
+                sns.histplot(numeric_synth[col_name], kde=True, ax=ax, color='skyblue')
+                ax.set_title(f"{col_name} Histogram (Synthetic)")
+                st.pyplot(fig)
+                
+                fig, ax = plt.subplots()
+                sns.boxplot(x=numeric_synth[col_name], ax=ax, color='salmon')
+                ax.set_title(f"{col_name} Boxplot (Synthetic)")
+                st.pyplot(fig)
+    
+    # Skewness bar charts side by side
+    col1, col2 = st.columns(2)
+    with col1:
+        fig, ax = plt.subplots(figsize=(8,4))
+        analysis_real['skewness'].plot(kind='bar', color='skyblue', ax=ax)
+        ax.set_title("Skewness per Feature (Real)")
+        st.pyplot(fig)
+    with col2:
+        fig, ax = plt.subplots(figsize=(8,4))
+        analysis_synth['skewness'].plot(kind='bar', color='skyblue', ax=ax)
+        ax.set_title("Skewness per Feature (Synthetic)")
+        st.pyplot(fig)
+    
+    # Kurtosis bar charts side by side
+    col1, col2 = st.columns(2)
+    with col1:
+        fig, ax = plt.subplots(figsize=(8,4))
+        analysis_real['kurtosis'].plot(kind='bar', color='salmon', ax=ax)
+        ax.set_title("Kurtosis per Feature (Real)")
+        st.pyplot(fig)
+    with col2:
+        fig, ax = plt.subplots(figsize=(8,4))
+        analysis_synth['kurtosis'].plot(kind='bar', color='salmon', ax=ax)
+        ax.set_title("Kurtosis per Feature (Synthetic)")
+        st.pyplot(fig)
+    
+    # Correlation heatmaps side by side
+    col1, col2 = st.columns(2)
+    with col1:
+        fig, ax = plt.subplots(figsize=(8,6))
+        sns.heatmap(analysis_real['correlation'], annot=True, cmap='coolwarm', ax=ax)
+        ax.set_title("Correlation Heatmap (Real)")
+        st.pyplot(fig)
+    with col2:
+        fig, ax = plt.subplots(figsize=(8,6))
+        sns.heatmap(analysis_synth['correlation'], annot=True, cmap='coolwarm', ax=ax)
+        ax.set_title("Correlation Heatmap (Synthetic)")
+        st.pyplot(fig)
+    
+    # Covariance heatmaps side by side
+    col1, col2 = st.columns(2)
+    with col1:
+        fig, ax = plt.subplots(figsize=(8,6))
+        sns.heatmap(analysis_real['covariance'], annot=True, cmap='viridis', ax=ax)
+        ax.set_title("Covariance Heatmap (Real)")
+        st.pyplot(fig)
+    with col2:
+        fig, ax = plt.subplots(figsize=(8,6))
+        sns.heatmap(analysis_synth['covariance'], annot=True, cmap='viridis', ax=ax)
+        ax.set_title("Covariance Heatmap (Synthetic)")
+        st.pyplot(fig)
+    
+    # Inference side by side
+    reasoning_real, conclusion_real = infer_real_or_synthetic(analysis_real)
+    reasoning_synth, conclusion_synth = infer_real_or_synthetic(analysis_synth)
+    
+    st.subheader("Inference and Conclusion")
+    col1, col2 = st.columns(2)
+    with col1:
+        st.markdown("**Real Dataset**")
+        for r in reasoning_real:
+            st.write(f"- {r}")
+        st.markdown(f"### {conclusion_real}")
+    with col2:
+        st.markdown("**Synthetic Dataset**")
+        for r in reasoning_synth:
+            st.write(f"- {r}")
+        st.markdown(f"### {conclusion_synth}")
+
+
 def save_plot_to_bytes(fig):
     buf = io.BytesIO()
     fig.savefig(buf, format="png", bbox_inches="tight")
     buf.seek(0)
     return buf
 
-
 if real_file and synthetic_file:
-    # ---------------- PDF GENERATION ----------------
+    # Generate downloadable PDF report
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=letter, rightMargin=20, leftMargin=20)
     elements = []
     styles = getSampleStyleSheet()
-    normal = styles["Normal"]
 
-    # Helper: dataframe -> nice table
-    from reportlab.platypus import TableStyle
-    def df_to_table(df, max_rows=10):
-        df = df.head(max_rows).reset_index()
-        data = [df.columns.tolist()] + df.values.tolist()
-        data = [[Paragraph(str(cell), normal) for cell in row] for row in data]
-        col_width = doc.width / len(df.columns)
-        t = Table(data, colWidths=[col_width] * len(df.columns))
-        t.setStyle(TableStyle([
-            ("GRID", (0,0), (-1,-1), 0.25, colors.black),
-            ("BACKGROUND", (0,0), (-1,0), colors.lightgrey),
-            ("FONTSIZE", (0,0), (-1,-1), 7),
-            ("VALIGN", (0,0), (-1,-1), "TOP")
-        ]))
-        return t
+    # Title
+    elements.append(Paragraph("Dataset Real vs Synthetic Inspector Report", styles["Title"]))
+    elements.append(Spacer(1, 20))
 
-    # Helper: save plot as image
-    def save_plot_to_bytes(fig):
-        buf = io.BytesIO()
-        fig.savefig(buf, format="png", bbox_inches="tight")
-        buf.seek(0)
-        return buf
+    # --- Skewness, Kurtosis & Normality Test (side by side)
+    elements.append(Paragraph("Skewness, Kurtosis & Normality Test", styles["Heading2"]))
+    table_data_real = [table_real.reset_index().columns.tolist()] + table_real.reset_index().values.tolist()
+    table_data_synth = [table_synth.reset_index().columns.tolist()] + table_synth.reset_index().values.tolist()
+    t = Table([
+        [Paragraph("<b>Real Dataset</b>", styles["Heading3"]),
+         Paragraph("<b>Synthetic Dataset</b>", styles["Heading3"])],
+        [Table(table_data_real, style=[("GRID", (0,0), (-1,-1), 0.5, colors.black)], colWidths=200),
+         Table(table_data_synth, style=[("GRID", (0,0), (-1,-1), 0.5, colors.black)], colWidths=200)]
+    ], colWidths=[270, 270])
+    elements.append(t)
+    elements.append(Spacer(1, 20))
 
-    # Helper: plots side by side
+    # --- Reasoning and conclusions (side by side)
+    elements.append(Paragraph("Inference and Conclusion", styles["Heading2"]))
+    reasoning_real_text = "<br/>".join([f"- {r}" for r in reasoning_real]) + f"<br/><b>{conclusion_real}</b>"
+    reasoning_synth_text = "<br/>".join([f"- {r}" for r in reasoning_synth]) + f"<br/><b>{conclusion_synth}</b>"
+    t = Table([
+        [Paragraph(reasoning_real_text, styles["Normal"]),
+         Paragraph(reasoning_synth_text, styles["Normal"])]
+    ], colWidths=[270, 270])
+    elements.append(t)
+    elements.append(Spacer(1, 20))
+
+    # --- Helper function to add plots side by side
     def add_side_by_side(fig_real, title_real, fig_synth, title_synth):
         row = []
         for fig, title in [(fig_real, title_real), (fig_synth, title_synth)]:
@@ -179,34 +324,7 @@ if real_file and synthetic_file:
             elements.append(t)
             elements.append(Spacer(1, 20))
 
-    # --- Title
-    elements.append(Paragraph("Dataset Real vs Synthetic Inspector Report", styles["Title"]))
-    elements.append(Spacer(1, 20))
-
-    # --- Skewness, Kurtosis & Normality
-    elements.append(Paragraph("Skewness, Kurtosis & Normality Test", styles["Heading2"]))
-    elements.append(Spacer(1, 8))
-    elements.append(Paragraph("<b>Real Dataset</b>", styles["Heading3"]))
-    elements.append(df_to_table(table_real))
-    elements.append(Spacer(1, 12))
-    elements.append(Paragraph("<b>Synthetic Dataset</b>", styles["Heading3"]))
-    elements.append(df_to_table(table_synth))
-    elements.append(Spacer(1, 20))
-
-    # --- Summary Statistics
-    elements.append(Paragraph("Summary Statistics", styles["Heading2"]))
-    elements.append(Spacer(1, 8))
-    elements.append(Paragraph("<b>Real Dataset</b>", styles["Heading3"]))
-    elements.append(df_to_table(analysis_real['summary']))
-    elements.append(Spacer(1, 12))
-    elements.append(Paragraph("<b>Synthetic Dataset</b>", styles["Heading3"]))
-    elements.append(df_to_table(analysis_synth['summary']))
-    elements.append(Spacer(1, 20))
-
-    # --- Visualizations
-    elements.append(Paragraph("Visualizations", styles["Heading2"]))
-    elements.append(Spacer(1, 12))
-
+    # --- Histograms & Boxplots
     for col_name in numeric_real.columns:
         # Histogram
         fig_real, ax = plt.subplots()
@@ -232,7 +350,7 @@ if real_file and synthetic_file:
         add_side_by_side(fig_real, f"{col_name} Boxplot (Real)",
                          fig_synth, f"{col_name} Boxplot (Synthetic)")
 
-    # Skewness
+    # --- Skewness charts
     fig_real, ax = plt.subplots(figsize=(6,4))
     analysis_real['skewness'].plot(kind='bar', color='skyblue', ax=ax)
     ax.set_title("Skewness per Feature (Real)")
@@ -242,7 +360,7 @@ if real_file and synthetic_file:
     add_side_by_side(fig_real, "Skewness per Feature (Real)",
                      fig_synth, "Skewness per Feature (Synthetic)")
 
-    # Kurtosis
+    # --- Kurtosis charts
     fig_real, ax = plt.subplots(figsize=(6,4))
     analysis_real['kurtosis'].plot(kind='bar', color='salmon', ax=ax)
     ax.set_title("Kurtosis per Feature (Real)")
@@ -252,7 +370,7 @@ if real_file and synthetic_file:
     add_side_by_side(fig_real, "Kurtosis per Feature (Real)",
                      fig_synth, "Kurtosis per Feature (Synthetic)")
 
-    # Correlation
+    # --- Correlation heatmaps
     fig_real, ax = plt.subplots(figsize=(6,4))
     sns.heatmap(analysis_real['correlation'], annot=True, cmap='coolwarm', ax=ax)
     ax.set_title("Correlation Heatmap (Real)")
@@ -262,7 +380,7 @@ if real_file and synthetic_file:
     add_side_by_side(fig_real, "Correlation Heatmap (Real)",
                      fig_synth, "Correlation Heatmap (Synthetic)")
 
-    # Covariance
+    # --- Covariance heatmaps
     fig_real, ax = plt.subplots(figsize=(6,4))
     sns.heatmap(analysis_real['covariance'], annot=True, cmap='viridis', ax=ax)
     ax.set_title("Covariance Heatmap (Real)")
@@ -272,24 +390,11 @@ if real_file and synthetic_file:
     add_side_by_side(fig_real, "Covariance Heatmap (Real)",
                      fig_synth, "Covariance Heatmap (Synthetic)")
 
-    # --- Inference & Conclusion
-    elements.append(Paragraph("Inference and Conclusion", styles["Heading2"]))
-    elements.append(Spacer(1, 8))
-
-    reasoning_real_text = "".join([f"• {r}<br/>" for r in reasoning_real]) + f"<br/><b>{conclusion_real}</b>"
-    elements.append(Paragraph("<b>Real Dataset</b>", styles["Heading3"]))
-    elements.append(Paragraph(reasoning_real_text, normal))
-    elements.append(Spacer(1, 12))
-
-    reasoning_synth_text = "".join([f"• {r}<br/>" for r in reasoning_synth]) + f"<br/><b>{conclusion_synth}</b>"
-    elements.append(Paragraph("<b>Synthetic Dataset</b>", styles["Heading3"]))
-    elements.append(Paragraph(reasoning_synth_text, normal))
-
-    # Build PDF
+    # --- Build PDF
     doc.build(elements)
     buffer.seek(0)
 
-    # --- Floating Download Button ---
+    # --- Floating Download Button (Pinned to Top-Right)
     st.markdown("""
         <style>
         .fixed-download {
@@ -314,3 +419,4 @@ if real_file and synthetic_file:
             mime="application/pdf"
         )
         st.markdown('</div>', unsafe_allow_html=True)
+
